@@ -75,21 +75,9 @@ Markdown回顾系统提供了一系列功能，以支持高效的文档管理和
 该系统采用以下技术栈：
 
 - 前端：Vue.js 3 ([Vue.js 官方文档](https://vuejs.org/)), Bootstrap 5 ([Bootstrap 官方文档](https://getbootstrap.com/))
-- 后端：Node.js ([Node.js 官方文档](https://nodejs.org/en/)), Express ([Express 官方文档](https://expressjs.com/))
 - 数据存储：LowDB ([LowDB GitHub 页面](https://github.com/typicode/lowdb)) (JSON文件数据库)
 - Markdown解析：Marked.js ([Marked.js GitHub 页面](https://github.com/markedjs/marked))
 - 代码高亮：Highlight.js ([Highlight.js 官方文档](https://highlightjs.org/))
-
-API端点包括：
-
-- GET /api/config：获取当前配置
-- POST /api/config：更新配置
-- GET /api/folders：获取目录结构
-- GET /api/documents/due-today：获取今天需复习的文档
-- POST /api/documents/:id/mark-reviewed：标记文档为已复习
-- POST /api/scan：重新扫描Markdown目录
-
-依赖包包括express, cors, fs-extra, lowdb, marked等。
 
 ## 相关背景与类似工具
 
