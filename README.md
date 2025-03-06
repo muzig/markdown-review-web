@@ -109,8 +109,8 @@ API端点包括：
 
 ## 贡献与联系
 
-- **贡献**：欢迎贡献！请查看[贡献指南](https://github.com/yourusername/markdown-review-system/blob/master/contributing.md)以了解详情。
-- **联系**：如有任何问题或反馈，请联系[您的邮箱](mailto:your.email@example.com)。
+- **贡献**：欢迎贡献！请查看[贡献指南](CONTRIBUTING.md)以了解详情。
+- **联系**：如有任何问题或反馈，请提交[issue](https://github.com/muzig/markdown-review-web/issues)。
 
 ## 关键引用
 
