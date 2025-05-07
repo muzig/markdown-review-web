@@ -15,6 +15,7 @@ const app = Vue.createApp({
       favorites: JSON.parse(localStorage.getItem("favorites") || "[]"),
       showNoteDialog: false,
       newNote: "",
+      currentLang: localStorage.getItem("lang") || "zh",
     };
   },
   computed: {
@@ -77,6 +78,10 @@ const app = Vue.createApp({
           return docs;
       }
     },
+    $t() {
+      // 返回当前语言的文本对象
+      return LANGS[this.currentLang] || LANGS.zh;
+    },
   },
   methods: {
     async scanDirectory() {
@@ -89,13 +94,16 @@ const app = Vue.createApp({
           await this.fetchFolderStructure();
           await this.fetchDocuments();
           this.loadCurrentFolder(this.currentFolder);
-          this.showToast("扫描完成", `已找到 ${data.count} 个Markdown文件`);
+          this.showToast(
+            this.$t.scanDone,
+            this.$t.foundCount.replace("{count}", data.count)
+          );
         } else {
-          this.showToast("扫描失败", data.error, "error");
+          this.showToast(this.$t.scanFailed, data.error, "error");
         }
       } catch (error) {
         console.error("扫描目录失败:", error);
-        this.showToast("扫描失败", "请检查网络连接", "error");
+        this.showToast(this.$t.scanFailed, "", "error");
       }
     },
     async fetchFolderStructure() {
@@ -104,15 +112,13 @@ const app = Vue.createApp({
         this.folderStructure = await response.json();
       } catch (error) {
         console.error("获取目录结构失败:", error);
-        this.showToast("获取目录结构失败", "请检查网络连接", "error");
+        this.showToast(this.$t.fetchFoldersFailed, "", "error");
       }
     },
     async fetchDocuments() {
       try {
         const response = await fetch("/api/documents");
         this.documents = await response.json();
-
-        // 恢复笔记和收藏状态
         this.documents.forEach((doc) => {
           const savedData = localStorage.getItem(`doc_${doc.id}`);
           if (savedData) {
@@ -124,24 +130,20 @@ const app = Vue.createApp({
         });
       } catch (error) {
         console.error("获取文档列表失败:", error);
-        this.showToast("获取文档列表失败", "请检查网络连接", "error");
+        this.showToast(this.$t.fetchDocsFailed, "", "error");
       }
     },
     async loadCurrentFolder(folder = "") {
       try {
         this.isSearching = false;
         this.currentFolder = folder;
-
-        // 获取当前目录下的文件夹
         this.currentFolders = this.getFoldersInPath(folder);
-
-        // 获取当前目录下的文档
         const encodedPath = encodeURIComponent(folder);
         const response = await fetch(`/api/folders/${encodedPath}`);
         this.currentDocuments = await response.json();
       } catch (error) {
         console.error("加载当前目录失败:", error);
-        this.showToast("加载目录失败", "请检查网络连接", "error");
+        this.showToast(this.$t.loadFolderFailed, "", "error");
       }
     },
     // 获取指定路径下的文件夹
@@ -235,10 +237,10 @@ const app = Vue.createApp({
       const index = this.favorites.indexOf(doc.id);
       if (index === -1) {
         this.favorites.push(doc.id);
-        this.showToast("已添加到收藏", doc.fileName);
+        this.showToast(this.$t.addedToFavorites, doc.fileName);
       } else {
         this.favorites.splice(index, 1);
-        this.showToast("已从收藏中移除", doc.fileName);
+        this.showToast(this.$t.removedFromFavorites, doc.fileName);
       }
       localStorage.setItem("favorites", JSON.stringify(this.favorites));
     },
@@ -251,20 +253,22 @@ const app = Vue.createApp({
           addedCount++;
         }
       });
-
       if (addedCount > 0) {
         localStorage.setItem("favorites", JSON.stringify(this.favorites));
-        this.showToast("批量添加到收藏", `已添加 ${addedCount} 个文档到收藏夹`);
+        this.showToast(
+          this.$t.batchAddFavorites,
+          this.$t.batchAddFavoritesMsg.replace("{count}", addedCount)
+        );
       } else {
-        this.showToast("提示", "当前视图中的文档已全部添加到收藏夹", "info");
+        this.showToast(this.$t.tip, this.$t.allAdded, "info");
       }
     },
     // 清空收藏夹
     clearFavorites() {
-      if (confirm("确定要清空收藏夹吗？此操作不可恢复。")) {
+      if (confirm(this.$t.confirmClearFavorites)) {
         this.favorites = [];
         localStorage.setItem("favorites", JSON.stringify(this.favorites));
-        this.showToast("已清空收藏夹", "所有收藏的文档已被移除");
+        this.showToast(this.$t.clearFavorites, this.$t.removedAllFavorites);
       }
     },
     // 检查是否收藏
@@ -282,28 +286,23 @@ const app = Vue.createApp({
         this.showNoteDialog = false;
         return;
       }
-
       if (!this.currentDocument.notes) {
         this.currentDocument.notes = [];
       }
-
       this.currentDocument.notes.push({
         text: this.newNote,
         date: new Date().toISOString(),
       });
-
-      // 保存到本地存储
       this.saveDocumentData(this.currentDocument);
-
       this.showNoteDialog = false;
-      this.showToast("笔记已添加", "");
+      this.showToast(this.$t.noteAdded, "");
     },
     // 删除笔记
     deleteNote(index) {
-      if (confirm("确定要删除这条笔记吗？")) {
+      if (confirm(this.$t.confirmDeleteNote)) {
         this.currentDocument.notes.splice(index, 1);
         this.saveDocumentData(this.currentDocument);
-        this.showToast("笔记已删除", "");
+        this.showToast(this.$t.noteDeleted, "");
       }
     },
     // 保存文档数据到本地存储
@@ -315,34 +314,27 @@ const app = Vue.createApp({
     },
     // 显示提示消息
     showToast(title, message, type = "success") {
-      // 简单的提示实现，可以替换为更复杂的UI组件
       alert(`${title}${message ? ": " + message : ""}`);
     },
     async openDocument(doc) {
       try {
         const response = await fetch(`/api/documents/${doc.id}`);
         const data = await response.json();
-
-        // 使用marked将Markdown转换为HTML
         if (data.content) {
           try {
             data.content = marked.parse(data.content);
           } catch (error) {
             console.error("Markdown解析失败:", error);
-            data.content = `<div class="alert alert-danger">Markdown解析失败: ${error.message}</div>
-                           <pre>${data.content}</pre>`;
+            data.content = `<div class="alert alert-danger">Markdown解析失败: ${error.message}</div><pre>${data.content}</pre>`;
           }
         }
-
-        // 恢复笔记
         if (this.currentDocument && this.currentDocument.id === data.id) {
           data.notes = this.currentDocument.notes;
         }
-
         this.currentDocument = data;
       } catch (error) {
         console.error("打开文档失败:", error);
-        this.showToast("打开文档失败", error.message, "error");
+        this.showToast(this.$t.openDocFailed, error.message, "error");
       }
     },
     async markReviewed(doc) {
@@ -350,20 +342,13 @@ const app = Vue.createApp({
         const response = await fetch(`/api/documents/${doc.id}/mark-reviewed`, {
           method: "POST",
         });
-
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
         const data = await response.json();
-
         if (data.success) {
-          // 保存当前文档的笔记
           const notes = this.currentDocument ? this.currentDocument.notes : [];
-
           this.currentDocument = data.document;
-
-          // 使用marked将Markdown转换为HTML
           if (this.currentDocument.content) {
             try {
               this.currentDocument.content = marked.parse(
@@ -371,29 +356,23 @@ const app = Vue.createApp({
               );
             } catch (error) {
               console.error("Markdown解析失败:", error);
-              this.currentDocument.content = `<div class="alert alert-danger">Markdown解析失败: ${error.message}</div>
-                                             <pre>${this.currentDocument.content}</pre>`;
+              this.currentDocument.content = `<div class=\"alert alert-danger\">Markdown解析失败: ${error.message}</div><pre>${this.currentDocument.content}</pre>`;
             }
           }
-
-          // 恢复笔记
           this.currentDocument.notes = notes;
-
           await this.fetchDocuments();
-
           if (this.isSearching) {
             this.searchDocuments();
           } else {
             this.loadCurrentFolder(this.currentFolder);
           }
-
-          this.showToast("复习完成", "已更新下次复习日期");
+          this.showToast(this.$t.reviewDone, this.$t.reviewDoneMsg);
         } else {
-          this.showToast("标记复习失败", "", "error");
+          this.showToast(this.$t.markReviewFailed, "", "error");
         }
       } catch (error) {
         console.error("标记复习失败:", error);
-        this.showToast("标记复习失败", error.message, "error");
+        this.showToast(this.$t.markReviewFailed, error.message, "error");
       }
     },
     formatPath(relativePath) {
@@ -417,6 +396,10 @@ const app = Vue.createApp({
         " " +
         date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       );
+    },
+    switchLang(lang) {
+      this.currentLang = lang;
+      localStorage.setItem("lang", lang);
     },
   },
   async mounted() {

@@ -19,16 +19,22 @@
         <header class="mb-4 p-3">
             <div class="row align-items-center">
                 <div class="col">
-                    <h1><i class="bi bi-book text-primary me-2"></i>Markdown回顾系统</h1>
-                    <p class="text-muted">基于艾宾浩斯记忆曲线的文档回顾工具</p>
+                    <h1><i class="bi bi-book text-primary me-2"></i>{{ $t.appTitle }}</h1>
+                    <p class="text-muted">{{ $t.appDesc }}</p>
                 </div>
                 <div class="col-auto d-flex gap-2">
                     <button @click="scanDirectory" class="btn btn-primary">
-                        <i class="bi bi-arrow-repeat me-1"></i>重新扫描
+                        <i class="bi bi-arrow-repeat me-1"></i>{{ $t.rescan }}
                     </button>
                     <button @click="toggleDarkMode" class="btn btn-outline-secondary">
                         <i :class="darkMode ? 'bi bi-sun' : 'bi bi-moon'"></i>
                     </button>
+                    <div class="btn-group">
+                        <button v-if="currentLang === 'en'" class="btn btn-outline-secondary btn-sm"
+                            :class="{ active: currentLang === 'zh' }" @click="switchLang('zh')">中文</button>
+                        <button v-if="currentLang === 'zh'" class="btn btn-outline-secondary btn-sm"
+                            :class="{ active: currentLang === 'en' }" @click="switchLang('en')">EN</button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -41,8 +47,8 @@
                     <div class="card-body">
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" v-model="searchQuery" placeholder="搜索文档..."
-                                @input="searchDocuments">
+                            <input type="text" class="form-control" v-model="searchQuery"
+                                :placeholder="$t.searchPlaceholder" @input="searchDocuments">
                             <button class="btn btn-outline-secondary" type="button" @click="clearSearch">
                                 <i class="bi bi-x"></i>
                             </button>
@@ -54,11 +60,11 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div><i class="bi bi-file-earmark-text text-primary me-2"></i>文档总数</div>
+                            <div><i class="bi bi-file-earmark-text text-primary me-2"></i>{{ $t.totalDocs }}</div>
                             <span class="badge bg-primary">{{ documents.length }}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <div><i class="bi bi-check-circle text-success me-2"></i>已复习文档</div>
+                            <div><i class="bi bi-check-circle text-success me-2"></i>{{ $t.reviewedDocs }}</div>
                             <span class="badge bg-success">{{ reviewedCount }}</span>
                         </div>
                     </div>
@@ -68,10 +74,11 @@
                 <div class="card mb-4" v-if="favoriteDocuments.length > 0">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="bi bi-star-fill text-warning me-2"></i>收藏夹
+                            <i class="bi bi-star-fill text-warning me-2"></i>{{ $t.favorites }}
                         </h5>
                         <div>
-                            <button @click="clearFavorites" class="btn btn-sm btn-outline-danger me-1" title="清空收藏夹">
+                            <button @click="clearFavorites" class="btn btn-sm btn-outline-danger me-1"
+                                :title="$t.clearFavorites">
                                 <i class="bi bi-trash"></i>
                             </button>
                             <span class="badge bg-warning">{{ favoriteDocuments.length }}</span>
@@ -86,12 +93,12 @@
                                 <span>{{ doc.fileName }}</span>
                             </div>
                             <div class="badges d-flex align-items-center">
-                                <span v-if="doc.dueForReview" class="badge bg-warning me-1">待复习</span>
+                                <span v-if="doc.dueForReview" class="badge bg-warning">{{ $t.toReview }}</span>
                                 <span v-if="doc.reviewCount > 0" class="badge bg-info me-1">
-                                    {{ doc.reviewCount }}次
+                                    {{ doc.reviewCount }}{{ $t.times }}
                                 </span>
                                 <button @click.stop.prevent="addToFavorites(doc)"
-                                    class="btn btn-sm btn-link text-danger p-0 ms-1" title="从收藏夹移除">
+                                    class="btn btn-sm btn-link text-danger p-0 ms-1" :title="$t.removedFromFavorites">
                                     <i class="bi bi-x-circle"></i>
                                 </button>
                             </div>
@@ -103,12 +110,12 @@
                 <div class="card mb-4" v-if="favoriteDocuments.length === 0">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-star text-muted me-2"></i>收藏夹
+                            <i class="bi bi-star text-muted me-2"></i>{{ $t.favorites }}
                         </h5>
                     </div>
                     <div class="card-body favorites-empty">
-                        <p class="mb-0">暂无收藏文档</p>
-                        <small>点击文档右上角的星标图标添加收藏</small>
+                        <p class="mb-0">{{ $t.emptyFavorites }}</p>
+                        <small>{{ $t.addToFavoritesTip }}</small>
                     </div>
                 </div>
 
@@ -117,15 +124,15 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
                             <i class="bi bi-folder2-open me-2"></i>
-                            {{ isSearching ? '搜索结果' : '文档浏览' }}
+                            {{ isSearching ? $t.searchResult : $t.browse }}
                         </h5>
                         <div>
                             <button @click="goToParentFolder" class="btn btn-sm btn-outline-secondary me-1"
-                                v-if="currentFolder && !isSearching" title="返回上级目录">
+                                v-if="currentFolder && !isSearching" :title="$t.back">
                                 <i class="bi bi-arrow-up"></i>
                             </button>
                             <button @click="addAllToFavorites" class="btn btn-sm btn-outline-warning me-1"
-                                v-if="sortedDocuments.length > 0" title="将当前视图中的所有文档添加到收藏夹">
+                                v-if="sortedDocuments.length > 0" :title="$t.addAllToFavorites">
                                 <i class="bi bi-star-fill"></i>
                             </button>
                             <div class="dropdown d-inline-block" v-if="!isSearching">
@@ -134,12 +141,12 @@
                                     <i class="bi bi-sort-alpha-down"></i>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                                    <li><a class="dropdown-item" href="#" @click.prevent="setSortOption('name')">{{
+                                            $t.sortByName }}</a></li>
+                                    <li><a class="dropdown-item" href="#" @click.prevent="setSortOption('date')">{{
+                                            $t.sortByDate }}</a></li>
                                     <li><a class="dropdown-item" href="#"
-                                            @click.prevent="setSortOption('name')">按名称排序</a></li>
-                                    <li><a class="dropdown-item" href="#"
-                                            @click.prevent="setSortOption('date')">按修改日期排序</a></li>
-                                    <li><a class="dropdown-item" href="#"
-                                            @click.prevent="setSortOption('reviewCount')">按复习次数排序</a></li>
+                                            @click.prevent="setSortOption('reviewCount')">{{ $t.sortByReview }}</a></li>
                                 </ul>
                             </div>
                         </div>
@@ -150,7 +157,7 @@
                             <nav aria-label="breadcrumb">
                                 <ol class="breadcrumb mb-0 py-1">
                                     <li class="breadcrumb-item">
-                                        <a href="#" @click.prevent="loadCurrentFolder('')">根目录</a>
+                                        <a href="#" @click.prevent="loadCurrentFolder('')">{{ $t.root }}</a>
                                     </li>
                                     <li v-for="(part, index) in folderParts" :key="index" class="breadcrumb-item">
                                         <a href="#" @click.prevent="navigateToFolderPart(index)">{{ part }}</a>
@@ -174,21 +181,21 @@
                                 <span>{{ doc.fileName }}</span>
                             </div>
                             <div class="badges">
-                                <span v-if="doc.dueForReview" class="badge bg-warning">待复习</span>
+                                <span v-if="doc.dueForReview" class="badge bg-warning">{{ $t.toReview }}</span>
                                 <span v-if="doc.reviewCount > 0" class="badge bg-info">
-                                    {{ doc.reviewCount }}次
+                                    {{ doc.reviewCount }}{{ $t.times }}
                                 </span>
                             </div>
                         </a>
 
                         <div v-if="(currentFolders.length === 0 && currentDocuments.length === 0) && !isSearching"
                             class="list-group-item text-center text-muted">
-                            此目录为空
+                            {{ $t.emptyDir }}
                         </div>
 
                         <div v-if="isSearching && sortedDocuments.length === 0"
                             class="list-group-item text-center text-muted">
-                            未找到匹配的文档
+                            {{ $t.notFound }}
                         </div>
                     </div>
                 </div>
@@ -202,7 +209,7 @@
                             <h2 class="mb-0">{{ currentDocument.title }}</h2>
                             <div>
                                 <button @click="markReviewed(currentDocument)" class="btn btn-success me-2">
-                                    <i class="bi bi-check-lg me-1"></i>标记为已复习
+                                    <i class="bi bi-check-lg me-1"></i>{{ $t.markReviewed }}
                                 </button>
                                 <button @click="addToFavorites(currentDocument)" class="btn btn-outline-warning">
                                     <i :class="isFavorite(currentDocument) ? 'bi bi-star-fill' : 'bi bi-star'"></i>
@@ -212,19 +219,19 @@
                         <div class="document-meta">
                             <span class="badge bg-light text-dark me-2">
                                 <i class="bi bi-calendar me-1"></i>
-                                修改于: {{ formatDate(currentDocument.modified) }}
+                                {{ $t.modified }} {{ formatDate(currentDocument.modified) }}
                             </span>
                             <span v-if="currentDocument.reviewCount > 0" class="badge bg-light text-dark me-2">
                                 <i class="bi bi-check-circle me-1"></i>
-                                已复习 {{ currentDocument.reviewCount }} 次
+                                {{ $t.reviewed }} {{ currentDocument.reviewCount }} {{ $t.times }}
                             </span>
                             <span v-if="currentDocument.lastReviewed" class="badge bg-light text-dark me-2">
                                 <i class="bi bi-clock-history me-1"></i>
-                                上次复习: {{ formatDate(currentDocument.lastReviewed) }}
+                                {{ $t.lastReviewed }} {{ formatDate(currentDocument.lastReviewed) }}
                             </span>
                             <span v-if="currentDocument.nextReviewDate" class="badge bg-light text-dark">
                                 <i class="bi bi-calendar-event me-1"></i>
-                                下次复习: {{ formatDate(currentDocument.nextReviewDate) }}
+                                {{ $t.nextReview }} {{ formatDate(currentDocument.nextReviewDate) }}
                             </span>
                         </div>
                     </div>
@@ -237,14 +244,14 @@
                             </div>
                             <div>
                                 <button @click="addNote()" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-journal-plus me-1"></i>添加笔记
+                                    <i class="bi bi-journal-plus me-1"></i>{{ $t.addNote }}
                                 </button>
                             </div>
                         </div>
 
                         <!-- 笔记区域 -->
                         <div v-if="currentDocument.notes && currentDocument.notes.length > 0" class="mt-3">
-                            <h5><i class="bi bi-journal-text me-2"></i>笔记</h5>
+                            <h5><i class="bi bi-journal-text me-2"></i>{{ $t.notes }}</h5>
                             <div v-for="(note, index) in currentDocument.notes" :key="index" class="note-item p-2 mb-2">
                                 <div class="d-flex justify-content-between">
                                     <small class="text-muted">{{ formatDate(note.date) }}</small>
@@ -262,8 +269,8 @@
                     <div class="mb-4">
                         <i class="bi bi-file-earmark-text display-1 text-muted"></i>
                     </div>
-                    <h3 class="text-muted">选择一个文档开始复习</h3>
-                    <p class="text-muted">从左侧边栏选择一个文档进行阅读和复习</p>
+                    <h3 class="text-muted">{{ $t.selectDoc }}</h3>
+                    <p class="text-muted">{{ $t.selectDocTip }}</p>
                 </div>
             </div>
         </main>
@@ -273,15 +280,16 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">添加笔记</h5>
+                        <h5 class="modal-title">{{ $t.addNote }}</h5>
                         <button @click="showNoteDialog = false" class="btn-close"></button>
                     </div>
                     <div class="modal-body">
-                        <textarea v-model="newNote" class="form-control" rows="4" placeholder="输入您的笔记内容..."></textarea>
+                        <textarea v-model="newNote" class="form-control" rows="4"
+                            :placeholder="$t.notePlaceholder"></textarea>
                     </div>
                     <div class="modal-footer">
-                        <button @click="saveNote" class="btn btn-primary">保存</button>
-                        <button @click="showNoteDialog = false" class="btn btn-secondary">取消</button>
+                        <button @click="saveNote" class="btn btn-primary">{{ $t.save }}</button>
+                        <button @click="showNoteDialog = false" class="btn btn-secondary">{{ $t.cancel }}</button>
                     </div>
                 </div>
             </div>
@@ -300,6 +308,7 @@
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/languages/xml.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/languages/css.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/languages/markdown.min.js"></script>
+    <script src="lang.js"></script>
     <script src="app.js"></script>
 </body>
 
