@@ -25,11 +25,11 @@ function scanMarkdownDirectory(dirPath, db) {
           } else if (path.extname(file).toLowerCase() === ".md") {
             try {
               const content = fs.readFileSync(filePath, "utf-8");
-              const id = generateFileId(filePath);
-              const title = extractTitle(content) || path.basename(file, ".md");
               const relativePath = path.relative(dirPath, filePath);
               // 统一使用正斜杠作为路径分隔符，避免Windows系统上的路径问题
               const normalizedRelativePath = relativePath.replace(/\\/g, "/");
+              const id = generateFileId(normalizedRelativePath);
+              const title = extractTitle(content) || path.basename(file, ".md");
               const folderPath =
                 path.dirname(normalizedRelativePath) === "."
                   ? ""
@@ -54,11 +54,8 @@ function scanMarkdownDirectory(dirPath, db) {
                 id,
                 title,
                 fileName,
-                path: filePath,
                 relativePath: normalizedRelativePath,
                 folderPath: folderPath,
-                created: stats.birthtime,
-                modified: stats.mtime,
                 size: stats.size,
               });
             } catch (error) {
@@ -115,9 +112,9 @@ function extractTitle(content) {
 /**
  * 为文件生成唯一ID
  */
-function generateFileId(filePath) {
+function generateFileId(relativePath) {
   try {
-    return crypto.createHash("md5").update(filePath).digest("hex");
+    return crypto.createHash("md5").update(relativePath).digest("hex");
   } catch (error) {
     console.error("生成文件ID失败:", error);
     // 使用时间戳作为备用ID

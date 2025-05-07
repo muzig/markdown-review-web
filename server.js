@@ -2,17 +2,54 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs-extra");
-require("dotenv").config();
 const { scanMarkdownDirectory } = require("./utils/markdown-scanner");
 const { calculateNextReview } = require("./utils/spaced-repetition");
 const low = require("lowdb");
 const FileSync = require("lowdb/adapters/FileSync");
+const { marked } = require("marked");
+const hljs = require("highlight.js");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+// Configure marked to use highlight.js
+const renderer = new marked.Renderer();
+renderer.code = (code, language) => {
+  const validLanguage = hljs.getLanguage(language) ? language : "plaintext";
+  const highlighted = hljs.highlight(code, { language: validLanguage }).value;
+  return `<pre><code class="hljs language-${validLanguage}">${highlighted}</code></pre>`;
+};
+
+marked.setOptions({
+  renderer: renderer,
+  gfm: true,
+  breaks: true,
+});
 
 const app = express();
 const PORT = process.env.PORT || 3030;
 
+// 支持通过环境变量配置docs和db目录
+const MARKDOWN_DIR =
+  process.env.MARKDOWN_DIR || path.resolve(__dirname, "../docs");
+const DB_FILE =
+  process.env.DB_FILE || path.resolve(__dirname, "../db/data.json");
+
+// 如果DB_FILE不存在，自动创建其父文件夹和空文件
+if (!fs.existsSync(DB_FILE)) {
+  fs.ensureDirSync(path.dirname(DB_FILE));
+  fs.writeFileSync(
+    DB_FILE,
+    JSON.stringify(
+      { documents: [], readingRecords: {}, folderStructure: {} },
+      null,
+      2
+    )
+  );
+}
+
 // 数据库设置
-const adapter = new FileSync("db/data.json");
+const adapter = new FileSync(DB_FILE);
 const db = low(adapter);
 db.defaults({ documents: [], readingRecords: {}, folderStructure: {} }).write();
 
@@ -21,15 +58,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// 从环境变量读取Markdown目录路径
-const markdownDir = process.env.MARKDOWN_DIR
-  ? path.resolve(__dirname, process.env.MARKDOWN_DIR)
-  : path.resolve(__dirname, "../docs");
-
 // API 路由
 // 1. 获取配置
 app.get("/api/config", (req, res) => {
-  res.json({ markdownDir });
+  res.json({ markdownDir: MARKDOWN_DIR, dbFile: DB_FILE });
 });
 
 // 2. 获取目录结构
@@ -134,19 +166,22 @@ app.get("/api/documents/:id", (req, res) => {
   }
 
   try {
-    // 检查文件是否存在
-    if (!fs.existsSync(document.path)) {
+    // 用 relativePath 拼接出实际文件路径
+    const filePath = path.join(MARKDOWN_DIR, document.relativePath);
+    if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: "文件不存在或已被移动" });
     }
 
-    const content = fs.readFileSync(document.path, "utf-8");
-    res.json({ ...document, content });
+    const content = fs.readFileSync(filePath, "utf-8");
+    // 使用 marked 解析 markdown 内容
+    const parsedContent = marked(content);
+    res.json({ ...document, content: parsedContent });
   } catch (error) {
-    console.error(`读取文件 ${document.path} 失败:`, error);
+    console.error(`读取文件 ${document.relativePath} 失败:`, error);
     res.status(500).json({
       error: "无法读取文档内容",
       message: error.message,
-      path: document.path,
+      path: document.relativePath,
     });
   }
 });
@@ -183,12 +218,12 @@ app.post("/api/documents/:id/mark-reviewed", (req, res) => {
 app.post("/api/scan", (req, res) => {
   try {
     // 确保目录存在
-    if (!fs.existsSync(markdownDir)) {
-      fs.ensureDirSync(markdownDir);
-      console.log(`已创建目录 ${markdownDir}`);
+    if (!fs.existsSync(MARKDOWN_DIR)) {
+      fs.ensureDirSync(MARKDOWN_DIR);
+      console.log(`已创建目录 ${MARKDOWN_DIR}`);
     }
 
-    const documents = scanMarkdownDirectory(markdownDir, db);
+    const documents = scanMarkdownDirectory(MARKDOWN_DIR, db);
     res.json({ success: true, count: documents.length });
   } catch (error) {
     console.error("扫描失败:", error);
@@ -208,18 +243,33 @@ app.use((err, req, res, next) => {
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
-  console.log(`使用的Markdown目录: ${markdownDir}`);
+  console.log(`使用的Markdown目录: ${MARKDOWN_DIR}`);
+  console.log(`使用的DB文件: ${DB_FILE}`);
 
   // 确保数据目录存在
   fs.ensureDirSync(path.dirname(adapter.source));
 
   // 初始扫描
-  if (fs.existsSync(markdownDir)) {
-    scanMarkdownDirectory(markdownDir, db);
-    console.log(`已扫描 ${db.get("documents").value().length} 个Markdown文件`);
+  if (fs.existsSync(MARKDOWN_DIR)) {
+    scanMarkdownDirectory(MARKDOWN_DIR, db);
+    // 启动时自动清理无效的阅读记录
+    const documents = db.get("documents").value();
+    const validIds = new Set(documents.map((doc) => doc.id));
+    const readingRecords = db.get("readingRecords").value();
+    let removed = 0;
+    for (const id of Object.keys(readingRecords)) {
+      if (!validIds.has(id)) {
+        db.get("readingRecords").unset(id).write();
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      console.log(`已自动清理 ${removed} 条无效的阅读记录`);
+    }
+    console.log(`已扫描 ${documents.length} 个Markdown文件`);
   } else {
-    console.log(`警告: 目录 ${markdownDir} 不存在.`);
-    fs.ensureDirSync(markdownDir);
-    console.log(`已创建目录 ${markdownDir}`);
+    console.log(`警告: 目录 ${MARKDOWN_DIR} 不存在.`);
+    fs.ensureDirSync(MARKDOWN_DIR);
+    console.log(`已创建目录 ${MARKDOWN_DIR}`);
   }
 });
