@@ -15,6 +15,10 @@
 - 跟踪每个文档的复习次数和下次复习日期
 - 支持Markdown语法高亮显示
 
+## 预览
+
+![preview](./assets/layout.png)
+
 ## 安装与运行
 
 1. 确保已安装Node.js (推荐v14或更高版本)
@@ -76,31 +80,3 @@ pnpm start
 - 数据存储: LowDB (JSON文件数据库)
 - Markdown解析: Marked.js
 - 代码高亮: Highlight.js
-
-## Project Description
-
-This application allows users to review markdown documents based on the Ebbinghaus forgetting curve. It helps users retain information by scheduling reviews at optimal intervals.
-
-## API Endpoints
-
-- **GET /api/config**: Get the current configuration.
-- **POST /api/config**: Update the configuration.
-- **GET /api/folders**: Get the directory structure.
-- **GET /api/folders/:folderPath?**: Get documents in a specific directory.
-- **GET /api/documents**: Get all documents.
-- **GET /api/documents/due-today**: Get documents due for review today.
-- **GET /api/documents/:id**: Get the content of a specific document.
-- **POST /api/documents/:id/mark-reviewed**: Mark a document as reviewed.
-- **POST /api/scan**: Rescan the markdown directory.
-
-## Dependencies
-
-- express
-- cors
-- fs-extra
-- lowdb
-- marked
-
-## License
-
-This project is licensed under the ISC License.
