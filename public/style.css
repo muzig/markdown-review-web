@@ -109,8 +109,9 @@ body.dark-mode .list-group-item {
 }
 
 body.dark-mode .list-group-item.active {
-  background-color: #2d3748;
-  border-color: #4299e1;
+  background-color: #22577a;
+  border-color: #38b6ff;
+  color: #fff;
 }
 
 body.dark-mode .list-group-item.bg-light {
@@ -394,4 +395,10 @@ body.dark-mode .card-header .bi-star-fill {
 
 body.dark-mode .favorites-empty {
   color: #adb5bd;
+}
+
+.list-group-item.active {
+  background-color: #e3f0ff;
+  border-color: #3498db;
+  color: #1565c0;
 }

@@ -11,9 +11,10 @@
   ],
   "readingRecords": {
     "ca17f34fca57dfcb0630e19fc6dd768a": {
-      "reviewCount": 2,
-      "lastReviewed": "2025-05-07T08:19:00.679Z",
-      "nextReviewDate": "2025-05-09T08:19:00.679Z"
+      "reviewCount": 4,
+      "lastReviewed": "2025-05-12T12:16:23.215Z",
+      "nextReviewDate": "2025-05-19T12:16:23.215Z",
+      "favorite": true
     }
   },
   "folderStructure": {
