@@ -222,8 +222,8 @@ app.post("/api/documents/:id/mark-reviewed", (req, res) => {
 
   // 更新阅读记录
   db.get("readingRecords")
-    .get(id)
-    .assign({
+    .set(id, {
+      ...currentRecord,
       reviewCount: currentRecord.reviewCount + 1,
       lastReviewed: now.toISOString(),
       nextReviewDate: calculateNextReview(currentRecord.reviewCount, now),
@@ -232,7 +232,7 @@ app.post("/api/documents/:id/mark-reviewed", (req, res) => {
 
   res.json({
     success: true,
-    document: { ...document, ...updatedRecord },
+    document: { ...document, ...currentRecord },
   });
 });
 
