@@ -221,13 +221,14 @@ app.post("/api/documents/:id/mark-reviewed", (req, res) => {
   const currentRecord = readingRecords[id] || { reviewCount: 0 };
 
   // 更新阅读记录
-  const updatedRecord = {
-    reviewCount: currentRecord.reviewCount + 1,
-    lastReviewed: now.toISOString(),
-    nextReviewDate: calculateNextReview(currentRecord.reviewCount, now),
-  };
-
-  db.get("readingRecords").set(id, updatedRecord).write();
+  db.get("readingRecords")
+    .get(id)
+    .assign({
+      reviewCount: currentRecord.reviewCount + 1,
+      lastReviewed: now.toISOString(),
+      nextReviewDate: calculateNextReview(currentRecord.reviewCount, now),
+    })
+    .write();
 
   res.json({
     success: true,
