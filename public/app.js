@@ -12,7 +12,7 @@ const app = Vue.createApp({
       searchQuery: "",
       isSearching: false,
       sortOption: localStorage.getItem("sortOption") || "name",
-      favorites: JSON.parse(localStorage.getItem("favorites") || "[]"),
+      favorites: [],
       showNoteDialog: false,
       newNote: "",
       currentLang: localStorage.getItem("lang") || "zh",
@@ -42,9 +42,7 @@ const app = Vue.createApp({
 
     // 获取收藏的文档
     favoriteDocuments() {
-      let docs = this.documents.filter((doc) =>
-        this.favorites.includes(doc.id)
-      );
+      let docs = this.documents.filter((doc) => doc.favorite);
       switch (this.favoriteSortOption) {
         case "name":
           docs = docs.sort((a, b) => a.fileName.localeCompare(b.fileName));
@@ -261,15 +259,13 @@ const app = Vue.createApp({
     },
     // 添加到收藏
     async addToFavorites(doc) {
-      const index = this.favorites.indexOf(doc.id);
-      if (index === -1) {
+      if (!doc.favorite) {
         // 调用后端收藏接口
         try {
           const res = await fetch(`/api/documents/${doc.id}/favorite`, {
             method: "POST",
           });
           if (!res.ok) throw new Error("收藏失败");
-          this.favorites.push(doc.id);
           this.showToast(this.$t.addedToFavorites, doc.fileName);
           await this.fetchDocuments(); // 刷新文档数据，确保favorite状态同步
         } catch (e) {
@@ -282,26 +278,23 @@ const app = Vue.createApp({
             method: "POST",
           });
           if (!res.ok) throw new Error("取消收藏失败");
-          this.favorites.splice(index, 1);
           this.showToast(this.$t.removedFromFavorites, doc.fileName);
           await this.fetchDocuments();
         } catch (e) {
           this.showToast("取消收藏失败", e.message, "error");
         }
       }
-      localStorage.setItem("favorites", JSON.stringify(this.favorites));
     },
     // 添加当前视图中的所有文档到收藏
     async addAllToFavorites() {
       let addedCount = 0;
       for (const doc of this.sortedDocuments) {
-        if (!this.favorites.includes(doc.id)) {
+        if (!doc.favorite) {
           try {
             const res = await fetch(`/api/documents/${doc.id}/favorite`, {
               method: "POST",
             });
             if (res.ok) {
-              this.favorites.push(doc.id);
               addedCount++;
             }
           } catch (e) {
@@ -310,7 +303,6 @@ const app = Vue.createApp({
         }
       }
       if (addedCount > 0) {
-        localStorage.setItem("favorites", JSON.stringify(this.favorites));
         await this.fetchDocuments();
         this.showToast(
           this.$t.batchAddFavorites,
@@ -323,23 +315,22 @@ const app = Vue.createApp({
     // 清空收藏夹
     async clearFavorites() {
       if (confirm(this.$t.confirmClearFavorites)) {
-        for (const id of [...this.favorites]) {
-          try {
-            const res = await fetch(`/api/documents/${id}/unfavorite`, {
-              method: "POST",
-            });
-            // 不管成功失败都继续
-          } catch (e) {}
+        for (const doc of this.documents) {
+          if (doc.favorite) {
+            try {
+              await fetch(`/api/documents/${doc.id}/unfavorite`, {
+                method: "POST",
+              });
+            } catch (e) {}
+          }
         }
-        this.favorites = [];
-        localStorage.setItem("favorites", JSON.stringify(this.favorites));
         await this.fetchDocuments();
         this.showToast(this.$t.clearFavorites, this.$t.removedAllFavorites);
       }
     },
     // 检查是否收藏
     isFavorite(doc) {
-      return this.favorites.includes(doc.id);
+      return !!doc.favorite;
     },
     // 添加笔记
     addNote() {
